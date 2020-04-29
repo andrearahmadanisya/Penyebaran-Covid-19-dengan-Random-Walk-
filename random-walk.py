@@ -115,8 +115,8 @@ class Simulation:
         self.WIDTH = width
         self.HEIGHT = height
 
-        self.susceptible_container = pygame.sprite.Group()
-        self.infected_container = pygame.sprite.Group()
+        self.individu_container = pygame.sprite.Group()
+        self.terinfeksi_container = pygame.sprite.Group()
         self.recovered_container = pygame.sprite.Group()
         self.all_container = pygame.sprite.Group()
 
@@ -138,8 +138,11 @@ class Simulation:
         screen = pygame.display.set_mode([self.WIDTH, self.HEIGHT])
 
         for i in range(self.jumlah_individu):
+            # Dibangkitkan dari nilai random
             x = np.random.randint(0, self.WIDTH + 1)
+            # Dibangkitkan dari nilai random
             y = np.random.randint(0, self.HEIGHT + 1)
+            # Dibangkitkan dari nilai random [-1,1]
             vel = np.random.rand(2) * 2 - 1
             guy = individu(
                 x,
@@ -150,7 +153,7 @@ class Simulation:
                 velocity=vel,
                 randomize=randomize,
             )
-            self.susceptible_container.add(guy)
+            self.individu_container.add(guy)
             self.all_container.add(guy)
 
         for i in range(self.probabilitas_Tidakbergerak):
@@ -166,7 +169,7 @@ class Simulation:
                 velocity=vel,
                 randomize=False,
             )
-            self.susceptible_container.add(guy)
+            self.individu_container.add(guy)
             self.all_container.add(guy)
 
         for i in range(self.individu_terinfeksi):
@@ -182,7 +185,7 @@ class Simulation:
                 velocity=vel,
                 randomize=randomize,
             )
-            self.infected_container.add(guy)
+            self.terinfeksi_container.add(guy)
             self.all_container.add(guy)
 
         stats = pygame.Surface((self.WIDTH // 4, self.HEIGHT // 4))
@@ -204,7 +207,7 @@ class Simulation:
             # Statistik Grafik Penyebaran
             stats_height = stats.get_height()
             stats_width = stats.get_width()
-            n_inf_now = len(self.infected_container)
+            n_inf_now = len(self.terinfeksi_container)
             n_pop_now = len(self.all_container)
             n_rec_now = len(self.recovered_container)
             t = int((i / self.T) * stats_width)
@@ -224,8 +227,8 @@ class Simulation:
 
             # Individu yang menginfeksi (individu - infection)
             collision_group = pygame.sprite.groupcollide(
-                self.susceptible_container,
-                self.infected_container,
+                self.individu_container,
+                self.terinfeksi_container,
                 True,
                 False,
             )
@@ -237,12 +240,12 @@ class Simulation:
                 new_guy.killswitch(
                     self.waktu_pemulihan, self.imun_recovery
                 )
-                self.infected_container.add(new_guy)
+                self.terinfeksi_container.add(new_guy)
                 self.all_container.add(new_guy)
 
-            # Individu yang berhasil sembuh (individu- recovery)
+            # Individu yang berhasil sembuh (individu - recovery)
             recovered = []
-            for guy in self.infected_container:
+            for guy in self.terinfeksi_container:
                 if guy.recovered:
                     new_guy = guy.respawn(GREEN)
                     self.recovered_container.add(new_guy)
@@ -250,7 +253,7 @@ class Simulation:
                     recovered.append(guy)
 
             if len(recovered) > 0:
-                self.infected_container.remove(*recovered)
+                self.terinfeksi_container.remove(*recovered)
                 self.all_container.remove(*recovered)
 
             self.all_container.draw(screen)
@@ -266,13 +269,10 @@ class Simulation:
 
 
 if __name__ == "__main__":
-    # Variabel dan objek disesuaikan dengan kriteria pada tugas
-    # Penyebaran penyakit/virus dengan Random Walk 
-    
-    # Ukuran ruang simulasi : 20x20 unit (CM -> Pixel)
+    # Ukuran ruang simulasi : 20x20 unit (20 CM -> 759,6 Pixel)
     virus = Simulation(756, 756)
 
-    # Jumlah Individu : 200
+    # Jumlah Individu
     virus.jumlah_individu = 200
 
     # Merupakan Individu yang tidak bergerak,
@@ -280,14 +280,16 @@ if __name__ == "__main__":
     # Probabilitas individu yang bergerak yaitu 80% maka didapat = 200 * 20%
     virus.probabilitas_Tidakbergerak = 40
 
-    # Rasio individu terinfeksi 5% 
+    # Rasio individu terinfeksi
     virus.individu_terinfeksi = 10
 
-    # Waktu pemulihan yaitu 10 hari
-    virus.waktu_pemulihan = 100 
+    waktu_pulih = 10
+    # Waktu pemulihan dalam timestamp, yaitu = 10
+    virus.waktu_pemulihan = 100
 
     # Rate waktu imunitas untuk individu yang terjangkit agar dapat sembuh
     virus.imun_recovery = 0.2
 
-    # Untuk dapat memulai RandomWalk
     virus.start(randomize=True)
+
+print("Waktu pemulihannya adalah : ", waktu_pulih, " - hari")
