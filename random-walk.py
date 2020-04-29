@@ -103,6 +103,7 @@ class Dot(pygame.sprite.Sprite):
         self.killswitch_on = True
         self.cycles_to_fate = cycles_to_fate
         self.mortality_rate = mortality_rate
+        
 #---------- ANIMASI 3D RANDOM -----------------------
 class ParticleBox:
     """Orbits class
