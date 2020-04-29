@@ -12,8 +12,8 @@ WHITE = (255, 255, 255)
 BLUE = (119, 158, 203)
 RED = (255, 105, 97)
 GREEN = (190, 199, 180)
+YELLOW = (190, 199, 180)
 GREY = (230, 230, 230)
-HORRIBLE_YELLOW = (190, 199, 180)
 BACKGROUND = WHITE
 
 # Merupakan kelas object atau individu yang bergerak
