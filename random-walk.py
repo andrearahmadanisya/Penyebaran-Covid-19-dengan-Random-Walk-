@@ -1,9 +1,7 @@
 # Andrea Rahmadanisya 1301184146
 # Vijay Cheza Pangestu 1301180351
 
-import random as rd
 import numpy as np
-import matplotlib.pyplot as plts
 #-------------------- animation -------------------
 import pygame
 import sys
