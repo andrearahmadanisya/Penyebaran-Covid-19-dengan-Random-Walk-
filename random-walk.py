@@ -6,6 +6,7 @@ import numpy as np
 import pygame
 import sys
 #---------------------------------------------------
+# Inisilaisasi untuk menggunakan variabel yang di assign dengan komposisi warna
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 BLUE = (119, 158, 203)
@@ -13,10 +14,10 @@ RED = (255, 105, 97)
 GREEN = (190, 199, 180)
 GREY = (230, 230, 230)
 HORRIBLE_YELLOW = (190, 199, 180)
-
 BACKGROUND = WHITE
 
-class Dot(pygame.sprite.Sprite):
+# Merupakan kelas object atau individu yang bergerak
+class individu(pygame.sprite.Sprite):
     def __init__(
         self,
         x,
@@ -36,7 +37,11 @@ class Dot(pygame.sprite.Sprite):
         )
 
         self.rect = self.image.get_rect()
+        # Inisialisasi container untuk mendapatkan nilai x,y yang
+        # nanti dibangkitkan dari bilangan acak
         self.pos = np.array([x, y], dtype=np.float64)
+        # menggunakan velocity sebagai kecepatan dan juga arah
+        # dalam bergerak pada library pygame
         self.vel = np.asarray(velocity, dtype=np.float64)
 
         self.killswitch_on = False
@@ -52,7 +57,7 @@ class Dot(pygame.sprite.Sprite):
 
         x, y = self.pos
 
-        # Periodic boundary conditions
+        # Periodic boundary conditions (PBC)
         if x < 0:
             self.pos[0] = self.WIDTH
             x = self.WIDTH
@@ -74,21 +79,22 @@ class Dot(pygame.sprite.Sprite):
             self.vel /= vel_norm
 
         if self.randomize:
+            # Yaitu dengan membangkitkan angka random dari [-1,1]
             self.vel += np.random.rand(2) * 2 - 1
 
         if self.killswitch_on:
-            self.cycles_to_fate -= 1
+            self.waktu_pemulihan -= 1
 
-            if self.cycles_to_fate <= 0:
+            if self.waktu_pemulihan <= 0:
                 self.killswitch_on = False
                 some_number = np.random.rand()
-                if self.mortality_rate > some_number:
+                if self.imun_recovery > some_number:
                     self.kill()
                 else:
                     self.recovered = True
 
     def respawn(self, color, radius=5):
-        return Dot(
+        return individu(
             self.rect.x,
             self.rect.y,
             self.WIDTH,
@@ -97,158 +103,191 @@ class Dot(pygame.sprite.Sprite):
             velocity=self.vel,
         )
 
-    def killswitch(self, cycles_to_fate=20, mortality_rate=0.2):
+    def killswitch(self, waktu_pemulihan=10, imun_recovery=0.2):
         self.killswitch_on = True
-        self.cycles_to_fate = cycles_to_fate
-        self.mortality_rate = mortality_rate
-        
-#---------- ANIMASI 3D RANDOM -----------------------
-class ParticleBox:
-    """Orbits class
-
-    init_state is an [N x 4] array, where N is the number of particles:
-       [[x1, y1, vx1, vy1],
-        [x2, y2, vx2, vy2],
-        ...               ]
-
-    bounds is the size of the box: [xmin, xmax, ymin, ymax]
-    """
-
-    def __init__(self,
-                 init_state=[[1, 0, 0, -1],
-                             [-0.5, 0.5, 0.5, 0.5],
-                             [-0.5, -0.5, -0.5, 0.5]],
-                 bounds=[-2, 2, -2, 2],
-                 size=0.04,
-                 M=0.05,
-                 G=9.8):
-        self.init_state = np.asarray(init_state, dtype=float)
-        self.M = M * np.ones(self.init_state.shape[0])
-        self.size = size
-        self.state = self.init_state.copy()
-        self.time_elapsed = 0
-        self.bounds = bounds
-        self.G = G
-
-    def step(self, dt):
-        """step once by dt seconds"""
-        self.time_elapsed += dt
-
-        # update positions
-        self.state[:, :2] += dt * self.state[:, 2:]
-
-        # find pairs of particles undergoing a collision
-        D = squareform(pdist(self.state[:, :2]))
-        ind1, ind2 = np.where(D < 2 * self.size)
-        unique = (ind1 < ind2)
-        ind1 = ind1[unique]
-        ind2 = ind2[unique]
-
-        # update velocities of colliding pairs
-        for i1, i2 in zip(ind1, ind2):
-            # mass
-            m1 = self.M[i1]
-            m2 = self.M[i2]
-
-            # location vector
-            r1 = self.state[i1, :2]
-            r2 = self.state[i2, :2]
-
-            # velocity vector
-            v1 = self.state[i1, 2:]
-            v2 = self.state[i2, 2:]
-
-            # relative location & velocity vectors
-            r_rel = r1 - r2
-            v_rel = v1 - v2
-
-            # momentum vector of the center of mass
-            v_cm = (m1 * v1 + m2 * v2) / (m1 + m2)
-
-            # collisions of spheres reflect v_rel over r_rel
-            rr_rel = np.dot(r_rel, r_rel)
-            vr_rel = np.dot(v_rel, r_rel)
-            v_rel = 2 * r_rel * vr_rel / rr_rel - v_rel
-
-            # assign new velocities
-            self.state[i1, 2:] = v_cm + v_rel * m2 / (m1 + m2)
-            self.state[i2, 2:] = v_cm - v_rel * m1 / (m1 + m2)
-
-        # check for crossing boundary
-        crossed_x1 = (self.state[:, 0] < self.bounds[0] + self.size)
-        crossed_x2 = (self.state[:, 0] > self.bounds[1] - self.size)
-        crossed_y1 = (self.state[:, 1] < self.bounds[2] + self.size)
-        crossed_y2 = (self.state[:, 1] > self.bounds[3] - self.size)
-
-        self.state[crossed_x1, 0] = self.bounds[0] + self.size
-        self.state[crossed_x2, 0] = self.bounds[1] - self.size
-
-        self.state[crossed_y1, 1] = self.bounds[2] + self.size
-        self.state[crossed_y2, 1] = self.bounds[3] - self.size
-
-        self.state[crossed_x1 | crossed_x2, 2] *= -1
-        self.state[crossed_y1 | crossed_y2, 3] *= -1
-
-        # add gravity
-        self.state[:, 3] -= self.M * self.G * dt
+        self.waktu_pemulihan = waktu_pemulihan
+        self.imun_recovery = imun_recovery
 
 
-# ------------------------------------------------------------
-# set up initial state
-np.random.seed(0)
-init_state = -0.5 + np.random.random((50, 4))
-init_state[:, :2] *= 3.9
+# Merupakan kelas untuk simulasi dapat berjalan
+class Simulation:
+    def __init__(self, width=756, height=756):
+        self.WIDTH = width
+        self.HEIGHT = height
 
-box = ParticleBox(init_state, size=0.04)
-dt = 1. / 60  # 30fps
+        self.susceptible_container = pygame.sprite.Group()
+        self.infected_container = pygame.sprite.Group()
+        self.recovered_container = pygame.sprite.Group()
+        self.all_container = pygame.sprite.Group()
+
+        # Inisialisasi variabel skalar secara default
+        self.jumlah_individu = 200
+        self.individu_terinfeksi = 10
+        self.probabilitas_Tidakbergerak = 40
+        self.T = 500  # Merupakan Time Stamp
+        self.waktu_pemulihan = 10
+        self.imun_recovery = 0.2
+
+    def start(self, randomize=False):
+
+        self.N = (
+            self.jumlah_individu + self.individu_terinfeksi + self.probabilitas_Tidakbergerak
+        )
+
+        pygame.init()
+        screen = pygame.display.set_mode([self.WIDTH, self.HEIGHT])
+
+        for i in range(self.jumlah_individu):
+            x = np.random.randint(0, self.WIDTH + 1)
+            y = np.random.randint(0, self.HEIGHT + 1)
+            vel = np.random.rand(2) * 2 - 1
+            guy = individu(
+                x,
+                y,
+                self.WIDTH,
+                self.HEIGHT,
+                color=BLUE,
+                velocity=vel,
+                randomize=randomize,
+            )
+            self.susceptible_container.add(guy)
+            self.all_container.add(guy)
+
+        for i in range(self.probabilitas_Tidakbergerak):
+            x = np.random.randint(0, self.WIDTH + 1)
+            y = np.random.randint(0, self.HEIGHT + 1)
+            vel = [0, 0]
+            guy = individu(
+                x,
+                y,
+                self.WIDTH,
+                self.HEIGHT,
+                color=BLUE,
+                velocity=vel,
+                randomize=False,
+            )
+            self.susceptible_container.add(guy)
+            self.all_container.add(guy)
+
+        for i in range(self.individu_terinfeksi):
+            x = np.random.randint(0, self.WIDTH + 1)
+            y = np.random.randint(0, self.HEIGHT + 1)
+            vel = np.random.rand(2) * 2 - 1
+            guy = individu(
+                x,
+                y,
+                self.WIDTH,
+                self.HEIGHT,
+                color=RED,
+                velocity=vel,
+                randomize=randomize,
+            )
+            self.infected_container.add(guy)
+            self.all_container.add(guy)
+
+        stats = pygame.Surface((self.WIDTH // 4, self.HEIGHT // 4))
+        stats.fill(GREY)
+        stats.set_alpha(230)
+        stats_pos = (self.WIDTH // 40, self.HEIGHT // 40)
+
+        clock = pygame.time.Clock()
+
+        for i in range(self.T):
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    sys.exit()
+
+            self.all_container.update()
+
+            screen.fill(BACKGROUND)
+
+            # Statistik Grafik Penyebaran
+            stats_height = stats.get_height()
+            stats_width = stats.get_width()
+            n_inf_now = len(self.infected_container)
+            n_pop_now = len(self.all_container)
+            n_rec_now = len(self.recovered_container)
+            t = int((i / self.T) * stats_width)
+            y_infect = int(
+                stats_height - (n_inf_now / n_pop_now) * stats_height
+            )
+            y_dead = int(
+                ((self.N - n_pop_now) / self.N) * stats_height
+            )
+            y_recovered = int((n_rec_now / n_pop_now) * stats_height)
+            stats_graph = pygame.PixelArray(stats)
+            stats_graph[t, y_infect:] = pygame.Color(*RED)
+            stats_graph[t, :y_dead] = pygame.Color(*YELLOW)
+            stats_graph[
+                t, y_dead: y_dead + y_recovered
+            ] = pygame.Color(*GREEN)
+
+            # Individu yang menginfeksi (individu - infection)
+            collision_group = pygame.sprite.groupcollide(
+                self.susceptible_container,
+                self.infected_container,
+                True,
+                False,
+            )
+
+            for guy in collision_group:
+                new_guy = guy.respawn(RED)
+                # kecepatan & arah akan berlawanan jika menyentuh individu lainnya
+                new_guy.vel *= -1
+                new_guy.killswitch(
+                    self.waktu_pemulihan, self.imun_recovery
+                )
+                self.infected_container.add(new_guy)
+                self.all_container.add(new_guy)
+
+            # Individu yang berhasil sembuh (individu- recovery)
+            recovered = []
+            for guy in self.infected_container:
+                if guy.recovered:
+                    new_guy = guy.respawn(GREEN)
+                    self.recovered_container.add(new_guy)
+                    self.all_container.add(new_guy)
+                    recovered.append(guy)
+
+            if len(recovered) > 0:
+                self.infected_container.remove(*recovered)
+                self.all_container.remove(*recovered)
+
+            self.all_container.draw(screen)
+
+            del stats_graph
+            stats.unlock()
+            screen.blit(stats, stats_pos)
+            pygame.display.flip()
+
+            clock.tick(30)
+
+        pygame.quit()
 
 
-# ------------------------------------------------------------
-# set up figure and animation
-fig = plt.figure()
-fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
-ax = fig.add_subplot(111, aspect='equal', autoscale_on=False,
-                     xlim=(-3.2, 3.2), ylim=(-2.4, 2.4))
+if __name__ == "__main__":
+    # Variabel dan objek disesuaikan dengan kriteria pada tugas
+    # Penyebaran penyakit/virus dengan Random Walk 
+    
+    # Ukuran ruang simulasi : 20x20 unit (CM -> Pixel)
+    virus = Simulation(756, 756)
 
-# particles holds the locations of the particles
-particles, = ax.plot([], [], 'bo', ms=6)
+    # Jumlah Individu : 200
+    virus.jumlah_individu = 200
 
-# rect is the box edge
-rect = plt.Rectangle(box.bounds[::2],
-                     box.bounds[1] - box.bounds[0],
-                     box.bounds[3] - box.bounds[2],
-                     ec='none', lw=2, fc='none')
-ax.add_patch(rect)
+    # Merupakan Individu yang tidak bergerak,
+    # yaitu didapat dari 100% dikurang dengan
+    # Probabilitas individu yang bergerak yaitu 80% maka didapat = 200 * 20%
+    virus.probabilitas_Tidakbergerak = 40
 
+    # Rasio individu terinfeksi 5% 
+    virus.individu_terinfeksi = 10
 
-def init():
-    """initialize animation"""
-    global box, rect
-    particles.set_data([], [])
-    rect.set_edgecolor('none')
-    return particles, rect
+    # Waktu pemulihan yaitu 10 hari
+    virus.waktu_pemulihan = 100 
 
+    # Rate waktu imunitas untuk individu yang terjangkit agar dapat sembuh
+    virus.imun_recovery = 0.2
 
-def animate(i):
-    """perform animation step"""
-    global box, rect, dt, ax, fig
-    box.step(dt)
-
-    ms = int(fig.dpi * 2 * box.size * fig.get_figwidth()
-             / np.diff(ax.get_xbound())[0])
-
-    # update pieces of the animation
-    rect.set_edgecolor('k')
-    particles.set_data(box.state[:, 0], box.state[:, 1])
-    particles.set_markersize(ms)
-    return particles, rect
-
-
-ani = animation.FuncAnimation(fig, animate, frames=600,
-                              interval=10, blit=True, init_func=init)
-
-
-
-plt.show()
-#--------------------------------------------------
-
+    # Untuk dapat memulai RandomWalk
+    virus.start(randomize=True)
