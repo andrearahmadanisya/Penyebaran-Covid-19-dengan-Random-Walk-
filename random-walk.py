@@ -17,36 +17,92 @@ GREY = (230, 230, 230)
 HORRIBLE_YELLOW = (190, 199, 180)
 
 BACKGROUND = WHITE
-# variabel Scalar
-jumlah_individu = 200  # 200 individu
-rasio_terinfeksi = 0.05  # 5% : 0.05
-PMove = 0.8  # 80% : 0.8
-WPemulihan = 10
-jumlah_terinfeksi = int(jumlah_individu * rasio_terinfeksi)
 
-# space
-x_max = 20
-y_max = 20
-x_min = 0
-y_min = 0
+class Dot(pygame.sprite.Sprite):
+    def __init__(
+        self,
+        x,
+        y,
+        width,
+        height,
+        color=BLACK,
+        radius=5,
+        velocity=[0, 0],
+        randomize=False,
+    ):
+        super().__init__()
+        self.image = pygame.Surface([radius * 2, radius * 2])
+        self.image.fill(BACKGROUND)
+        pygame.draw.circle(
+            self.image, color, (radius, radius), radius
+        )
 
-range_x = x_max - x_min
-range_y = y_max - y_min
-x_position = []
-y_position = []
+        self.rect = self.image.get_rect()
+        self.pos = np.array([x, y], dtype=np.float64)
+        self.vel = np.asarray(velocity, dtype=np.float64)
 
-# variabel list
-for i in range(jumlah_individu):
-    x_position.append(rd.randint(x_min, x_max))
-    y_position.append(rd.randint(y_min, y_max))
+        self.killswitch_on = False
+        self.recovered = False
+        self.randomize = randomize
 
-WInfeksi = []
-imun = []
+        self.WIDTH = width
+        self.HEIGHT = height
 
+    def update(self):
 
-# Inisial waktu infeksi
-WInfeksi.append(0)
+        self.pos += self.vel
 
+        x, y = self.pos
+
+        # Periodic boundary conditions
+        if x < 0:
+            self.pos[0] = self.WIDTH
+            x = self.WIDTH
+        if x > self.WIDTH:
+            self.pos[0] = 0
+            x = 0
+        if y < 0:
+            self.pos[1] = self.HEIGHT
+            y = self.HEIGHT
+        if y > self.HEIGHT:
+            self.pos[1] = 0
+            y = 0
+
+        self.rect.x = x
+        self.rect.y = y
+
+        vel_norm = np.linalg.norm(self.vel)
+        if vel_norm > 3:
+            self.vel /= vel_norm
+
+        if self.randomize:
+            self.vel += np.random.rand(2) * 2 - 1
+
+        if self.killswitch_on:
+            self.cycles_to_fate -= 1
+
+            if self.cycles_to_fate <= 0:
+                self.killswitch_on = False
+                some_number = np.random.rand()
+                if self.mortality_rate > some_number:
+                    self.kill()
+                else:
+                    self.recovered = True
+
+    def respawn(self, color, radius=5):
+        return Dot(
+            self.rect.x,
+            self.rect.y,
+            self.WIDTH,
+            self.HEIGHT,
+            color=color,
+            velocity=self.vel,
+        )
+
+    def killswitch(self, cycles_to_fate=20, mortality_rate=0.2):
+        self.killswitch_on = True
+        self.cycles_to_fate = cycles_to_fate
+        self.mortality_rate = mortality_rate
 #---------- ANIMASI 3D RANDOM -----------------------
 class ParticleBox:
     """Orbits class
