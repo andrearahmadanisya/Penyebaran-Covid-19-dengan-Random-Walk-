@@ -8,7 +8,15 @@ import matplotlib.pyplot as plts
 import pygame
 import sys
 #---------------------------------------------------
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+BLUE = (119, 158, 203)
+RED = (255, 105, 97)
+GREEN = (190, 199, 180)
+GREY = (230, 230, 230)
+HORRIBLE_YELLOW = (190, 199, 180)
 
+BACKGROUND = WHITE
 # variabel Scalar
 jumlah_individu = 200  # 200 individu
 rasio_terinfeksi = 0.05  # 5% : 0.05
